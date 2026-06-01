@@ -1,0 +1,22 @@
+{
+  "name": "rasul-proforma-platform",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Private Proforma and Order Management platform",
+  "workspaces": [
+    "apps/backend",
+    "apps/frontend"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "lint": "npm run lint --workspaces",
+    "prisma:generate": "npm run prisma:generate -w apps/backend",
+    "prisma:migrate": "npm run prisma:migrate -w apps/backend",
+    "seed": "npm run seed -w apps/backend"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  }
+}
