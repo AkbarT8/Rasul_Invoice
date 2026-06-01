@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -26,33 +25,33 @@ enum AttachmentOwnerType {
 }
 
 model User {
-  id           String             @id @default(uuid())
-  name         String
-  email        String             @unique
-  passwordHash String
-  role         Role               @default(USER)
-  isActive     Boolean            @default(true)
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-  assignments  ClientAssignment[]
-  sessions     UserSession[]
-  createdClients Client[]          @relation("ClientCreator")
-  createdProformas Proforma[]      @relation("ProformaCreator")
+  id               String             @id @default(uuid())
+  name             String
+  email            String             @unique
+  passwordHash     String
+  role             Role               @default(USER)
+  isActive         Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  assignments      ClientAssignment[]
+  sessions         UserSession[]
+  createdClients   Client[]           @relation("ClientCreator")
+  createdProformas Proforma[]         @relation("ProformaCreator")
 
   @@index([role])
 }
 
 model UserSession {
-  id               String   @id @default(uuid())
-  userId           String
-  tokenHash        String
-  userAgent        String?
-  ipAddress        String?
-  remember         Boolean  @default(false)
-  expiresAt        DateTime
-  revokedAt        DateTime?
-  createdAt        DateTime @default(now())
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String
+  userAgent String?
+  ipAddress String?
+  remember  Boolean   @default(false)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([tokenHash])
@@ -68,9 +67,9 @@ model Client {
   country     String?
   notes       String?
   createdById String
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  createdBy   User              @relation("ClientCreator", fields: [createdById], references: [id])
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  createdBy   User               @relation("ClientCreator", fields: [createdById], references: [id])
   assignments ClientAssignment[]
   proformas   Proforma[]
   attachments FileAttachment[]
@@ -93,21 +92,21 @@ model ClientAssignment {
 }
 
 model Proforma {
-  id              String           @id @default(uuid())
-  clientId        String
-  proformaNumber  String
-  date            DateTime
-  status          ProformaStatus   @default(DRAFT)
-  currency        String           @default("USD")
-  notes           String?
-  createdById     String
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  client          Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdBy       User             @relation("ProformaCreator", fields: [createdById], references: [id])
-  columns         CustomColumn[]
-  rows            ArticleRow[]
-  attachments     FileAttachment[]
+  id             String           @id @default(uuid())
+  clientId       String
+  proformaNumber String
+  date           DateTime
+  status         ProformaStatus   @default(DRAFT)
+  currency       String           @default("USD")
+  notes          String?
+  createdById    String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  client         Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdBy      User             @relation("ProformaCreator", fields: [createdById], references: [id])
+  columns        CustomColumn[]
+  rows           ArticleRow[]
+  attachments    FileAttachment[]
 
   @@unique([clientId, proformaNumber])
   @@index([status])
@@ -116,30 +115,30 @@ model Proforma {
 }
 
 model CustomColumn {
-  id          String    @id @default(uuid())
-  proformaId  String
-  key         String
-  name        String
-  type        String    @default("text")
-  position    Int
-  hidden      Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  proforma    Proforma  @relation(fields: [proformaId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  proformaId String
+  key        String
+  name       String
+  type       String   @default("text")
+  position   Int
+  hidden     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  proforma   Proforma @relation(fields: [proformaId], references: [id], onDelete: Cascade)
 
   @@unique([proformaId, key])
   @@index([proformaId, position])
 }
 
 model ArticleRow {
-  id          String    @id @default(uuid())
-  proformaId  String
-  position    Int
-  cells       Json      @default("{}")
-  colors      Json      @default("{}")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  proforma    Proforma  @relation(fields: [proformaId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  proformaId String
+  position   Int
+  cells      Json     @default("{}")
+  colors     Json     @default("{}")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  proforma   Proforma @relation(fields: [proformaId], references: [id], onDelete: Cascade)
 
   @@index([proformaId, position])
   @@index([updatedAt])

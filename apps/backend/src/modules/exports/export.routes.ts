@@ -34,10 +34,10 @@ router.use(requireAuth);
 router.post(
   "/proformas/:proformaId",
   asyncHandler(async (req, res) => {
-    await ensureProformaAccess(req.user, req.params.proformaId);
+    await ensureProformaAccess(req.user, (req.params.proformaId as string));
     const body = exportSchema.parse(req.body);
     const proforma = await prisma.proforma.findUnique({
-      where: { id: req.params.proformaId },
+      where: { id: (req.params.proformaId as string) },
       include: {
         client: true,
         columns: { orderBy: { position: "asc" } },
@@ -47,11 +47,17 @@ router.post(
 
     if (!proforma) throw new HttpError(404, "Proforma not found");
 
-    const selectedColumns = proforma.columns.filter((column) => {
+    const exportProforma = proforma as typeof proforma & {
+      client: { name: string; companyName: string };
+      columns: Array<{ key: string; name: string; hidden: boolean }>;
+      rows: Array<{ id: string; cells: unknown; colors: unknown }>;
+    };
+
+    const selectedColumns = exportProforma.columns.filter((column) => {
       if (column.hidden && !body.columnKeys?.includes(column.key)) return false;
       return body.columnKeys?.length ? body.columnKeys.includes(column.key) : true;
     });
-    const selectedRows = proforma.rows.filter((row) => (body.rowIds?.length ? body.rowIds.includes(row.id) : true));
+    const selectedRows = exportProforma.rows.filter((row) => (body.rowIds?.length ? body.rowIds.includes(row.id) : true));
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = "Proforma OS";
@@ -65,7 +71,7 @@ router.post(
     worksheet.getCell("A1").value = `Proforma ${proforma.proformaNumber}`;
     worksheet.getCell("A1").font = { size: 18, bold: true, color: { argb: "FF0F172A" } };
     worksheet.getCell("A2").value = "Client";
-    worksheet.getCell("B2").value = `${proforma.client.name} - ${proforma.client.companyName}`;
+    worksheet.getCell("B2").value = `${exportProforma.client.name} - ${exportProforma.client.companyName}`;
     worksheet.getCell("A3").value = "Date";
     worksheet.getCell("B3").value = proforma.date;
     worksheet.getCell("B3").numFmt = "yyyy-mm-dd";

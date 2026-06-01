@@ -81,7 +81,7 @@ router.post(
 router.get(
   "/:attachmentId/download",
   asyncHandler(async (req, res) => {
-    const attachment = await prisma.fileAttachment.findUnique({ where: { id: req.params.attachmentId } });
+    const attachment = await prisma.fileAttachment.findUnique({ where: { id: (req.params.attachmentId as string) } });
     if (!attachment) throw new HttpError(404, "Attachment not found");
 
     if (attachment.ownerType === AttachmentOwnerType.CLIENT && attachment.clientId) {
@@ -98,7 +98,7 @@ router.get(
 router.delete(
   "/:attachmentId",
   asyncHandler(async (req, res) => {
-    const attachment = await prisma.fileAttachment.findUnique({ where: { id: req.params.attachmentId } });
+    const attachment = await prisma.fileAttachment.findUnique({ where: { id: (req.params.attachmentId as string) } });
     if (!attachment) throw new HttpError(404, "Attachment not found");
 
     if (attachment.ownerType === AttachmentOwnerType.CLIENT && attachment.clientId) {

@@ -123,9 +123,9 @@ router.post(
 router.get(
   "/:proformaId",
   asyncHandler(async (req, res) => {
-    await ensureProformaAccess(req.user, req.params.proformaId);
+    await ensureProformaAccess(req.user, (req.params.proformaId as string));
     const proforma = await prisma.proforma.findUnique({
-      where: { id: req.params.proformaId },
+      where: { id: (req.params.proformaId as string) },
       include: {
         client: true,
         attachments: true,
@@ -141,10 +141,10 @@ router.get(
 router.patch(
   "/:proformaId",
   asyncHandler(async (req, res) => {
-    await ensureProformaAccess(req.user, req.params.proformaId);
+    await ensureProformaAccess(req.user, (req.params.proformaId as string));
     const body = updateProformaSchema.parse(req.body);
     const proforma = await prisma.proforma.update({
-      where: { id: req.params.proformaId },
+      where: { id: (req.params.proformaId as string) },
       data: {
         proformaNumber: body.proformaNumber,
         date: body.date,
@@ -161,7 +161,7 @@ router.delete(
   "/:proformaId",
   requireRole(Role.ADMIN),
   asyncHandler(async (req, res) => {
-    await prisma.proforma.delete({ where: { id: req.params.proformaId } });
+    await prisma.proforma.delete({ where: { id: (req.params.proformaId as string) } });
     res.status(204).send();
   })
 );
@@ -170,15 +170,15 @@ router.post(
   "/:proformaId/columns",
   requireRole(Role.ADMIN),
   asyncHandler(async (req, res) => {
-    await ensureProformaAccess(req.user, req.params.proformaId);
+    await ensureProformaAccess(req.user, (req.params.proformaId as string));
     const body = columnSchema.parse(req.body);
     const lastColumn = await prisma.customColumn.findFirst({
-      where: { proformaId: req.params.proformaId },
+      where: { proformaId: (req.params.proformaId as string) },
       orderBy: { position: "desc" }
     });
     const column = await prisma.customColumn.create({
       data: {
-        proformaId: req.params.proformaId,
+        proformaId: (req.params.proformaId as string),
         key: slugifyColumnKey(body.name),
         name: body.name,
         type: body.type,
@@ -194,10 +194,10 @@ router.patch(
   "/:proformaId/columns/:columnId",
   requireRole(Role.ADMIN),
   asyncHandler(async (req, res) => {
-    await ensureProformaAccess(req.user, req.params.proformaId);
+    await ensureProformaAccess(req.user, (req.params.proformaId as string));
     const body = updateColumnSchema.parse(req.body);
     const column = await prisma.customColumn.update({
-      where: { id: req.params.columnId, proformaId: req.params.proformaId },
+      where: { id: (req.params.columnId as string), proformaId: (req.params.proformaId as string) },
       data: body
     });
     res.json({ column });
@@ -208,18 +208,18 @@ router.post(
   "/:proformaId/columns/reorder",
   requireRole(Role.ADMIN),
   asyncHandler(async (req, res) => {
-    await ensureProformaAccess(req.user, req.params.proformaId);
+    await ensureProformaAccess(req.user, (req.params.proformaId as string));
     const body = z.object({ columnIds: z.array(z.string().uuid()).min(1) }).parse(req.body);
     await prisma.$transaction(
       body.columnIds.map((id, position) =>
         prisma.customColumn.update({
-          where: { id, proformaId: req.params.proformaId },
+          where: { id, proformaId: (req.params.proformaId as string) },
           data: { position }
         })
       )
     );
     const columns = await prisma.customColumn.findMany({
-      where: { proformaId: req.params.proformaId },
+      where: { proformaId: (req.params.proformaId as string) },
       orderBy: { position: "asc" }
     });
     res.json({ columns });
@@ -230,8 +230,8 @@ router.delete(
   "/:proformaId/columns/:columnId",
   requireRole(Role.ADMIN),
   asyncHandler(async (req, res) => {
-    await ensureProformaAccess(req.user, req.params.proformaId);
-    await prisma.customColumn.delete({ where: { id: req.params.columnId, proformaId: req.params.proformaId } });
+    await ensureProformaAccess(req.user, (req.params.proformaId as string));
+    await prisma.customColumn.delete({ where: { id: (req.params.columnId as string), proformaId: (req.params.proformaId as string) } });
     res.status(204).send();
   })
 );
@@ -239,15 +239,15 @@ router.delete(
 router.post(
   "/:proformaId/rows",
   asyncHandler(async (req, res) => {
-    await ensureProformaAccess(req.user, req.params.proformaId);
+    await ensureProformaAccess(req.user, (req.params.proformaId as string));
     const body = rowSchema.parse(req.body);
     const lastRow = await prisma.articleRow.findFirst({
-      where: { proformaId: req.params.proformaId },
+      where: { proformaId: (req.params.proformaId as string) },
       orderBy: { position: "desc" }
     });
     const row = await prisma.articleRow.create({
       data: {
-        proformaId: req.params.proformaId,
+        proformaId: (req.params.proformaId as string),
         position: body.position ?? (lastRow?.position ?? -1) + 1,
         cells: body.cells as Prisma.InputJsonValue,
         colors: body.colors as Prisma.InputJsonValue
@@ -260,10 +260,10 @@ router.post(
 router.patch(
   "/:proformaId/rows/:rowId",
   asyncHandler(async (req, res) => {
-    await ensureProformaAccess(req.user, req.params.proformaId);
+    await ensureProformaAccess(req.user, (req.params.proformaId as string));
     const body = updateRowSchema.parse(req.body);
     const row = await prisma.articleRow.update({
-      where: { id: req.params.rowId, proformaId: req.params.proformaId },
+      where: { id: (req.params.rowId as string), proformaId: (req.params.proformaId as string) },
       data: {
         position: body.position,
         cells: body.cells as Prisma.InputJsonValue | undefined,
@@ -277,24 +277,24 @@ router.patch(
 router.post(
   "/:proformaId/rows/bulk",
   asyncHandler(async (req, res) => {
-    await ensureProformaAccess(req.user, req.params.proformaId);
+    await ensureProformaAccess(req.user, (req.params.proformaId as string));
     const body = bulkSchema.parse(req.body);
 
     if (body.action === "delete") {
       await prisma.articleRow.deleteMany({
-        where: { id: { in: body.rowIds }, proformaId: req.params.proformaId }
+        where: { id: { in: body.rowIds }, proformaId: (req.params.proformaId as string) }
       });
       return res.status(204).send();
     }
 
     const rows = await prisma.articleRow.findMany({
-      where: { id: { in: body.rowIds }, proformaId: req.params.proformaId },
+      where: { id: { in: body.rowIds }, proformaId: (req.params.proformaId as string) },
       orderBy: { position: "asc" }
     });
 
     if (body.action === "duplicate") {
       const lastRow = await prisma.articleRow.findFirst({
-        where: { proformaId: req.params.proformaId },
+        where: { proformaId: (req.params.proformaId as string) },
         orderBy: { position: "desc" }
       });
       const startPosition = (lastRow?.position ?? -1) + 1;
@@ -302,7 +302,7 @@ router.post(
         rows.map((row, index) =>
           prisma.articleRow.create({
             data: {
-              proformaId: req.params.proformaId,
+              proformaId: (req.params.proformaId as string),
               position: startPosition + index,
               cells: row.cells as Prisma.InputJsonValue,
               colors: row.colors as Prisma.InputJsonValue
@@ -336,8 +336,8 @@ router.post(
 router.delete(
   "/:proformaId/rows/:rowId",
   asyncHandler(async (req, res) => {
-    await ensureProformaAccess(req.user, req.params.proformaId);
-    await prisma.articleRow.delete({ where: { id: req.params.rowId, proformaId: req.params.proformaId } });
+    await ensureProformaAccess(req.user, (req.params.proformaId as string));
+    await prisma.articleRow.delete({ where: { id: (req.params.rowId as string), proformaId: (req.params.proformaId as string) } });
     res.status(204).send();
   })
 );

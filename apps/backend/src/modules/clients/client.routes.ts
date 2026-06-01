@@ -102,9 +102,9 @@ router.post(
 router.get(
   "/:clientId",
   asyncHandler(async (req, res) => {
-    await ensureClientAccess(req.user, req.params.clientId);
+    await ensureClientAccess(req.user, (req.params.clientId as string));
     const client = await prisma.client.findUnique({
-      where: { id: req.params.clientId },
+      where: { id: (req.params.clientId as string) },
       include: {
         assignments: { include: { user: { select: { id: true, name: true, email: true } } } },
         attachments: true,
@@ -127,7 +127,7 @@ router.patch(
   asyncHandler(async (req, res) => {
     const body = updateClientSchema.parse(req.body);
     const client = await prisma.client.update({
-      where: { id: req.params.clientId },
+      where: { id: (req.params.clientId as string) },
       data: {
         name: body.name,
         companyName: body.companyName,
@@ -155,7 +155,7 @@ router.delete(
   "/:clientId",
   requireRole(Role.ADMIN),
   asyncHandler(async (req, res) => {
-    await prisma.client.delete({ where: { id: req.params.clientId } });
+    await prisma.client.delete({ where: { id: (req.params.clientId as string) } });
     res.status(204).send();
   })
 );
