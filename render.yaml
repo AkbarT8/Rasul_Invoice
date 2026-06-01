@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: proforma-api
+    env: node
+    plan: starter
+    rootDir: apps/backend
+    buildCommand: npm install && npm run prisma:generate && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        sync: false
+
+databases:
+  - name: proforma-postgres
+    plan: starter
