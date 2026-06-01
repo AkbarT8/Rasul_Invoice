@@ -1,0 +1,175 @@
+// Prisma schema — Rasul Proforma
+//
+// Datasource provider is set via env. SQLite for local dev, Postgres for prod.
+// Switch by simply replacing DATABASE_URL — no schema changes needed because
+// we avoid db-specific types (Json, enums use String, etc.).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// -------------------------------------------------------------------------
+// Users / Auth
+// -------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("USER") // "ADMIN" | "USER"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  clientsCreated  Client[]   @relation("ClientCreatedBy")
+  proformasCreated Proforma[] @relation("ProformaCreatedBy")
+  uploads         Attachment[]
+  assignments     ClientAssignment[]
+}
+
+// USER role gets access only to clients explicitly assigned to them.
+// ADMIN bypasses this and sees everything.
+model ClientAssignment {
+  id       String @id @default(cuid())
+  userId   String
+  clientId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clientId])
+  @@index([clientId])
+}
+
+// -------------------------------------------------------------------------
+// Clients
+// -------------------------------------------------------------------------
+
+model Client {
+  id          String   @id @default(cuid())
+  name        String
+  companyName String?
+  email       String?
+  phone       String?
+  country     String?
+  notes       String?  // rich-text-ready (markdown / html-safe rendered)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdById String?
+  createdBy   User?    @relation("ClientCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  proformas   Proforma[]
+  attachments Attachment[]
+  assignments ClientAssignment[]
+
+  @@index([name])
+  @@index([companyName])
+  @@index([country])
+}
+
+// -------------------------------------------------------------------------
+// Proformas
+// -------------------------------------------------------------------------
+
+model Proforma {
+  id        String   @id @default(cuid())
+  number    String
+  date      DateTime @default(now())
+  status    String   @default("DRAFT") // DRAFT | PENDING | PROCESSING | COMPLETED | CANCELLED
+  currency  String   @default("USD")
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clientId    String
+  client      Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdById String?
+  createdBy   User?  @relation("ProformaCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  columns     ProformaColumn[]
+  rows        ProformaRow[]
+  attachments Attachment[]
+
+  @@unique([clientId, number])
+  @@index([status])
+  @@index([date])
+}
+
+// Dynamic columns per proforma. Order controls left-to-right position.
+model ProformaColumn {
+  id         String  @id @default(cuid())
+  proformaId String
+  name       String
+  type       String  @default("text") // text | number | date | select
+  width      Int     @default(160)
+  order      Int     @default(0)
+  hidden     Boolean @default(false)
+  // For select-type columns: JSON-encoded array of option strings
+  options    String? // e.g. '["Red","Green","Blue"]'
+
+  proforma Proforma     @relation(fields: [proformaId], references: [id], onDelete: Cascade)
+  cells    ProformaCell[]
+
+  @@index([proformaId, order])
+}
+
+// One row in a proforma sheet.
+model ProformaRow {
+  id         String   @id @default(cuid())
+  proformaId String
+  order      Int      @default(0)
+  // Optional row-level highlight color (CSS class key). Cells can also be colored individually.
+  color      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  proforma Proforma     @relation(fields: [proformaId], references: [id], onDelete: Cascade)
+  cells    ProformaCell[]
+
+  @@index([proformaId, order])
+}
+
+// A single cell (rowId × columnId). Sparse — only existing cells are stored.
+model ProformaCell {
+  id       String  @id @default(cuid())
+  rowId    String
+  columnId String
+  value    String? // raw string value; client interprets per column type
+  color    String? // tailwind color key: green | red | yellow | blue | purple | orange | gray | (null)
+
+  row    ProformaRow    @relation(fields: [rowId], references: [id], onDelete: Cascade)
+  column ProformaColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
+  @@unique([rowId, columnId])
+  @@index([columnId])
+}
+
+// -------------------------------------------------------------------------
+// Attachments (files)
+// -------------------------------------------------------------------------
+
+model Attachment {
+  id         String   @id @default(cuid())
+  name       String   // original file name
+  storedName String   // disk file name (sanitized + uniquified)
+  mimeType   String
+  size       Int
+  createdAt  DateTime @default(now())
+
+  uploadedById String?
+  uploadedBy   User?   @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  clientId   String?
+  client     Client?   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  proformaId String?
+  proforma   Proforma? @relation(fields: [proformaId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([proformaId])
+}
