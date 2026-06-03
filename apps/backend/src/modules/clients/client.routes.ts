@@ -4,7 +4,7 @@ import { z } from "zod";
 import { asyncHandler, HttpError } from "../../lib/http.js";
 import { prisma } from "../../lib/prisma.js";
 import { getPagination } from "../../lib/validation.js";
-import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { requireAuth } from "../../middleware/auth.js";
 import { ensureClientAccess } from "../../lib/access.js";
 
 const router = Router();
@@ -71,7 +71,6 @@ router.get(
 
 router.post(
   "/",
-  requireRole(Role.ADMIN),
   asyncHandler(async (req, res) => {
     const body = clientSchema.parse(req.body);
     const client = await prisma.client.create({
@@ -123,7 +122,6 @@ router.get(
 
 router.patch(
   "/:clientId",
-  requireRole(Role.ADMIN),
   asyncHandler(async (req, res) => {
     const body = updateClientSchema.parse(req.body);
     const client = await prisma.client.update({
@@ -153,8 +151,8 @@ router.patch(
 
 router.delete(
   "/:clientId",
-  requireRole(Role.ADMIN),
   asyncHandler(async (req, res) => {
+    await ensureClientAccess(req.user, (req.params.clientId as string));
     await prisma.client.delete({ where: { id: (req.params.clientId as string) } });
     res.status(204).send();
   })

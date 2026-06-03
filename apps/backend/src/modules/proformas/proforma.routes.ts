@@ -4,7 +4,7 @@ import { z } from "zod";
 import { asyncHandler, HttpError } from "../../lib/http.js";
 import { prisma } from "../../lib/prisma.js";
 import { getPagination } from "../../lib/validation.js";
-import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { requireAuth } from "../../middleware/auth.js";
 import { ensureClientAccess, ensureProformaAccess } from "../../lib/access.js";
 
 const router = Router();
@@ -54,6 +54,14 @@ function slugifyColumnKey(name: string) {
     .slice(0, 42);
   return `${base || "column"}_${Math.random().toString(36).slice(2, 7)}`;
 }
+
+const DEFAULT_COLUMNS = [
+  { name: "Article", key: "article", type: "text" as const },
+  { name: "Quantity", key: "quantity", type: "number" as const },
+  { name: "Price", key: "price", type: "currency" as const },
+  { name: "Delivery", key: "delivery", type: "text" as const },
+  { name: "Notes", key: "notes", type: "richText" as const }
+];
 
 router.use(requireAuth);
 
@@ -112,9 +120,18 @@ router.post(
         status: body.status,
         currency: body.currency.toUpperCase(),
         notes: body.notes,
-        createdById: req.user!.id
+        createdById: req.user!.id,
+        columns: {
+          create: DEFAULT_COLUMNS.map((column, position) => ({
+            key: column.key,
+            name: column.name,
+            type: column.type,
+            position,
+            hidden: false
+          }))
+        }
       },
-      include: { columns: true, rows: true, client: true }
+      include: { columns: { orderBy: { position: "asc" } }, rows: true, client: true }
     });
     res.status(201).json({ proforma });
   })
@@ -159,8 +176,8 @@ router.patch(
 
 router.delete(
   "/:proformaId",
-  requireRole(Role.ADMIN),
   asyncHandler(async (req, res) => {
+    await ensureProformaAccess(req.user, (req.params.proformaId as string));
     await prisma.proforma.delete({ where: { id: (req.params.proformaId as string) } });
     res.status(204).send();
   })
@@ -168,7 +185,6 @@ router.delete(
 
 router.post(
   "/:proformaId/columns",
-  requireRole(Role.ADMIN),
   asyncHandler(async (req, res) => {
     await ensureProformaAccess(req.user, (req.params.proformaId as string));
     const body = columnSchema.parse(req.body);
@@ -192,7 +208,6 @@ router.post(
 
 router.patch(
   "/:proformaId/columns/:columnId",
-  requireRole(Role.ADMIN),
   asyncHandler(async (req, res) => {
     await ensureProformaAccess(req.user, (req.params.proformaId as string));
     const body = updateColumnSchema.parse(req.body);
@@ -206,7 +221,6 @@ router.patch(
 
 router.post(
   "/:proformaId/columns/reorder",
-  requireRole(Role.ADMIN),
   asyncHandler(async (req, res) => {
     await ensureProformaAccess(req.user, (req.params.proformaId as string));
     const body = z.object({ columnIds: z.array(z.string().uuid()).min(1) }).parse(req.body);
@@ -228,7 +242,6 @@ router.post(
 
 router.delete(
   "/:proformaId/columns/:columnId",
-  requireRole(Role.ADMIN),
   asyncHandler(async (req, res) => {
     await ensureProformaAccess(req.user, (req.params.proformaId as string));
     await prisma.customColumn.delete({ where: { id: (req.params.columnId as string), proformaId: (req.params.proformaId as string) } });
